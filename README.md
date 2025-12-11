@@ -1,4 +1,4 @@
-# MRZ Scanner
+# Passport MRZ Scanner OCR
 
 A Python application that extracts Machine-Readable Zone (MRZ) data from passport images and PDF files. The scanner automatically rotates images to find the MRZ data and returns parsed information in JSON or human-readable format.
 
@@ -76,7 +76,7 @@ sudo dnf install poppler-utils
 ### 1. Clone the Repository
 ```bash
 git clone <repository-url>
-cd mrz-project
+cd passport-mrz-scanner-ocr
 ```
 
 ### 2. Create a Virtual Environment
@@ -228,7 +228,7 @@ P<GBRPUDARSAN<<HENERT<<<<<<<<<<<<<<<<<<<<<<<
 ## Project Structure
 
 ```
-mrz-project/
+passport-mrz-scanner-ocr/
 ├── mrz_scanner.py      # Main application script
 ├── requirements.txt    # Python dependencies
 ├── README.md          # This file
