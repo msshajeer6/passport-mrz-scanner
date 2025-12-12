@@ -49,7 +49,12 @@ temp_passport_page.png
 # *.png
 # *.pdf
 
+# Environment variables
+.env
+
 # OS
 Thumbs.db
 .DS_Store
+
+
 
