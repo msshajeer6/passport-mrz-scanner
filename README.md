@@ -64,9 +64,11 @@ sudo wget https://github.com/tesseract-ocr/tessdata/raw/main/mrz.traineddata
 sudo dnf install tesseract
 ```
 
-### 3. Poppler (for PDF support)
-Required for converting PDF files to images.
+### 3. PDF rendering backend (PyMuPDF primary)
+- **PyMuPDF (fitz)** is the primary and fastest renderer (already in `requirements.txt`), no extra system install needed.
+- **Poppler/pdf2image** is only a fallback if PyMuPDF is unavailable. Most users can skip Poppler.
 
+If you still want Poppler fallback:
 #### Windows:
 1. Download from [Poppler for Windows](http://blog.alivate.com.au/poppler-windows/)
 2. Extract and add the `bin` folder to your system PATH
