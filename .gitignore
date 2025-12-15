@@ -43,6 +43,9 @@ venv.bak/
 *.temp
 temp_passport_page.png
 *.log
+# Local test helpers / reports
+show_summary.py
+test_comprehensive_start_page.py
 
 # Test files (optional - uncomment if you don't want to track sample images)
 # *.jpg
