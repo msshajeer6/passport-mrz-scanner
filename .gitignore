@@ -52,6 +52,10 @@ temp_passport_page.png
 # Environment variables
 .env
 
+# MRZ language model (exclude from root, but allow in api/ for Docker)
+mrz.traineddata
+!api/mrz.traineddata
+
 # OS
 Thumbs.db
 .DS_Store

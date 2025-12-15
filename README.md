@@ -6,6 +6,7 @@ A Python application that extracts Machine-Readable Zone (MRZ) data from passpor
 
 - 📄 Supports both image files (JPG, PNG) and PDF files
 - 📑 Multi-page PDF support - automatically checks all pages if MRZ not found on first page
+- 🏁 Optional `start_page` hint for PDFs to jump directly to the likely MRZ page (huge speedup when known)
 - 🔄 Automatically rotates images (0°, -90°, 90°) to find MRZ data
 - 📊 Output in JSON or human-readable text format
 - ⏱️ Processing time tracking - includes execution time in all results
@@ -34,16 +35,28 @@ The application requires Tesseract OCR to be installed on your system.
 1. Download the installer from [GitHub Tesseract releases](https://github.com/UB-Mannheim/tesseract/wiki)
 2. Run the installer and install to the default location: `C:\Program Files\Tesseract-OCR\`
 3. Add Tesseract to your system PATH, or configure the path in your `.env` file (see Configuration section)
+4. **(Optional)** Download the MRZ language model for improved fallback OCR accuracy:
+   - Download `mrz.traineddata` from [Tesseract OCR tessdata repository](https://github.com/tesseract-ocr/tessdata)
+   - Copy it to: `C:\Program Files\Tesseract-OCR\tessdata\`
+   - **Note:** The scanner works without this file (fastmrz has built-in models), but the fallback OCR will use English instead
 
 #### macOS:
 ```bash
 brew install tesseract
+# Optional: Install MRZ language model for improved fallback OCR accuracy
+cd /usr/local/share/tessdata
+wget https://github.com/tesseract-ocr/tessdata/raw/main/mrz.traineddata
+# Note: Scanner works without this - fastmrz has built-in models
 ```
 
 #### Linux (Ubuntu/Debian):
 ```bash
 sudo apt-get update
 sudo apt-get install tesseract-ocr
+# Optional: Install MRZ language model for improved fallback OCR accuracy
+cd /usr/share/tesseract-ocr/5/tessdata
+sudo wget https://github.com/tesseract-ocr/tessdata/raw/main/mrz.traineddata
+# Note: Scanner works without this - fastmrz has built-in models
 ```
 
 #### Linux (Fedora):
@@ -147,12 +160,21 @@ TESSERACT_PATH=C:\Program Files\Tesseract-OCR\tesseract.exe
 # DPI for PDF to image conversion (higher = better quality but slower)
 # Recommended: 300 (good balance), 400 (high quality), 200 (faster)
 PDF_DPI=300
+# Optional fast path for known pages (used when --start-page is provided)
+# Recommended: 200 (fast) or 250 (balanced-fast)
+PDF_DPI_FAST=200
+
+# Resize safeguard for very large images (pixels on longest side)
+# Increase if MRZ is small in the image; default keeps typical A4 at 300 DPI unscaled
+MAX_IMAGE_DIMENSION=4000
 
 # OCR Configuration
 # PSM (Page Segmentation Mode) for Tesseract
 # 6 = Uniform block of text (default, good for MRZ)
 # 11 = Sparse text (alternative for MRZ)
 OCR_PSM_MODE=6
+# Faster PSM used only for the start_page hint to speed up OCR
+OCR_PSM_MODE_FAST=11
 
 # Maximum Pages Configuration
 # Default maximum number of PDF pages to check if --max-pages is not specified
@@ -195,12 +217,22 @@ Scan a PDF file (checks pages up to MAX_PAGES_DEFAULT from .env, or all pages if
 python mrz_scanner.py <pdf_file>
 ```
 
+Scan a PDF and hint the MRZ page (big speedup if known):
+```bash
+python mrz_scanner.py <pdf_file> --start-page 3
+```
+
 Override page limit (optional):
 ```bash
 python mrz_scanner.py <pdf_file> --max-pages 5
 ```
 
 **Note:** By default, the script limits PDF processing to prevent long-running scans. Configure `MAX_PAGES_DEFAULT` in `.env` to adjust the default limit, or use `--max-pages` to override per-file.
+
+### API Usage (start_page)
+- `/scan` (multipart) and `/scan/base64` accept an optional `start_page` field for PDFs.
+- `/scan/url` accepts `start_page` in the JSON body.
+- Authentication: provide `X-API-Key` or `Authorization: Bearer <key>` if enabled.
 
 ### Output Formats
 
@@ -309,12 +341,46 @@ P<GBRPUDARSAN<<HENERT<<<<<<<<<<<<<<<<<<<<<<<
 - **Images:** JPG, JPEG, PNG
 - **Documents:** PDF (all pages - automatically checks multiple pages if MRZ not found on first page)
 
+## API Deployment
+
+This application can be deployed as a containerized API service using Docker. This is ideal for production use with Laravel or other web applications.
+
+The API version is located in the `api/` folder. The Docker image is generic and can be deployed to any platform (AWS ECS Fargate, local server, VPS, Kubernetes, etc.). See [api/README.md](api/README.md) for API documentation and [api/DEPLOYMENT.md](api/DEPLOYMENT.md) for detailed deployment instructions.
+
 ## Troubleshooting
 
 ### Tesseract Not Found
 - Ensure Tesseract is installed and in your system PATH
 - Or update the `TESSERACT_PATH` in your `.env` file to match your installation
 - If Tesseract is in your PATH, you can leave `TESSERACT_PATH` empty in `.env`
+
+### MRZ Language Model Missing (Optional)
+The scanner uses the `mrz` language model for the fallback OCR method. If you encounter errors like:
+```
+Error opening data file .../tessdata/mrz.traineddata
+```
+
+**Important:** The scanner will still work without this file! The `fastmrz` library has its own built-in models and will function normally. The MRZ language model is only needed for the fallback OCR method, which may improve accuracy in some edge cases.
+
+**To install the MRZ language model (optional):**
+
+1. **Windows:**
+   - Download `mrz.traineddata` from [Tesseract OCR tessdata](https://github.com/tesseract-ocr/tessdata)
+   - Copy it to: `C:\Program Files\Tesseract-OCR\tessdata\`
+
+2. **macOS:**
+   ```bash
+   cd /usr/local/share/tessdata
+   wget https://github.com/tesseract-ocr/tessdata/raw/main/mrz.traineddata
+   ```
+
+3. **Linux (Ubuntu/Debian):**
+   ```bash
+   cd /usr/share/tesseract-ocr/5/tessdata
+   sudo wget https://github.com/tesseract-ocr/tessdata/raw/main/mrz.traineddata
+   ```
+
+**Note:** The `fastmrz` library's primary OCR method uses its own models and doesn't require this file. The MRZ language model is only used by the fallback OCR method if `fastmrz` doesn't find MRZ data initially.
 
 ### PDF Conversion Errors
 - Ensure Poppler is installed and the `pdftoppm` utility is accessible
@@ -329,16 +395,47 @@ P<GBRPUDARSAN<<HENERT<<<<<<<<<<<<<<<<<<<<<<<
 - For rotated images, the scanner tries multiple orientations automatically
 - Check the `processing_time_seconds` in the output - if it's very short, the MRZ might not have been detected properly
 
+### MRZ Language Model Missing (Optional)
+If you see errors about `mrz.traineddata` not found, the scanner will still work using the `fastmrz` library's built-in models. However, the fallback OCR will use English language instead of the specialized MRZ model, which may reduce accuracy.
+
+**To install the MRZ language model:**
+
+1. **Windows:**
+   - Download `mrz.traineddata` from [Tesseract OCR tessdata](https://github.com/tesseract-ocr/tessdata)
+   - Copy to: `C:\Program Files\Tesseract-OCR\tessdata\`
+
+2. **macOS:**
+   ```bash
+   cd /usr/local/share/tessdata
+   wget https://github.com/tesseract-ocr/tessdata/raw/main/mrz.traineddata
+   ```
+
+3. **Linux:**
+   ```bash
+   cd /usr/share/tesseract-ocr/5/tessdata
+   sudo wget https://github.com/tesseract-ocr/tessdata/raw/main/mrz.traineddata
+   ```
+
+**Note:** The `fastmrz` library has its own models and will work without this file. The MRZ language model is only needed for the fallback OCR method.
+
 ## Project Structure
 
 ```
 passport-mrz-scanner/
-├── mrz_scanner.py      # Main application script
-├── requirements.txt    # Python dependencies
-├── .env.example        # Environment configuration template
-├── .env                # Local environment configuration (create from .env.example)
-├── README.md          # This file
-└── .gitignore         # Git ignore file
+├── mrz_scanner.py          # Main CLI application script
+├── requirements.txt        # Python dependencies (CLI version)
+├── .env.example            # Environment configuration template
+├── .env                    # Local environment configuration (create from .env.example)
+├── README.md               # This file (CLI documentation)
+├── .gitignore              # Git ignore file
+└── api/                    # API deployment (Docker-based)
+    ├── app.py              # Flask API wrapper
+    ├── Dockerfile          # Docker image definition
+    ├── .dockerignore       # Docker ignore file
+    ├── requirements.txt    # Python dependencies (includes API deps)
+    ├── ecs-task-definition.json # ECS Fargate task definition template (optional)
+    ├── DEPLOYMENT.md       # Deployment guide
+    └── README.md           # API documentation
 ```
 
 ## Dependencies
@@ -348,3 +445,5 @@ passport-mrz-scanner/
 - `Pillow` (PIL) - Image processing
 - `pytesseract` - Python wrapper for Tesseract OCR
 - `python-dotenv` - Environment variable management
+
+> **Note:** For API deployment, additional dependencies (Flask, Flask-CORS, Gunicorn) are listed in `api/requirements.txt`.
