@@ -343,11 +343,19 @@ P<GBRPUDARSAN<<HENERT<<<<<<<<<<<<<<<<<<<<<<<
 - **Images:** JPG, JPEG, PNG
 - **Documents:** PDF (all pages - automatically checks multiple pages if MRZ not found on first page)
 
-## API Deployment
+## API Usage (Docker)
 
-This application can be deployed as a containerized API service using Docker. This is ideal for production use with Laravel or other web applications.
+The API lives in the `api/` folder and exposes:
 
-The API version is located in the `api/` folder. The Docker image is generic and can be deployed to any platform (AWS ECS Fargate, local server, VPS, Kubernetes, etc.). See [api/README.md](api/README.md) for API documentation and [api/DEPLOYMENT.md](api/DEPLOYMENT.md) for detailed deployment instructions.
+- `POST /scan/file` – multipart upload (`file`, optional `max_pages`, optional `start_page` for PDFs)
+- `POST /scan/base64` – JSON body `{ file: <base64>, filename: "...", max_pages?, start_page? }`
+- `POST /scan/url` – JSON body `{ url: "...", max_pages?, start_page? }`
+
+Authentication (if enabled): `X-API-Key: <key>` or `Authorization: Bearer <key>`.
+
+`start_page` hint: If you know the MRZ page (e.g., page 3), set `start_page` to jump there first for a big speedup.
+
+For deployment instructions and Swagger docs, see [api/README.md](api/README.md) and [api/DEPLOYMENT.md](api/DEPLOYMENT.md).
 
 ## Troubleshooting
 
@@ -385,7 +393,7 @@ Error opening data file .../tessdata/mrz.traineddata
 **Note:** The `fastmrz` library's primary OCR method uses its own models and doesn't require this file. The MRZ language model is only used by the fallback OCR method if `fastmrz` doesn't find MRZ data initially.
 
 ### PDF Conversion Errors
-- Ensure Poppler is installed and the `pdftoppm` utility is accessible
+- PyMuPDF is the primary renderer (no system install needed). If PyMuPDF fails and you rely on the Poppler fallback, ensure `pdftoppm` is installed and on PATH.
 - Check that the PDF file is not corrupted or password-protected
 
 ### No MRZ Data Found
@@ -443,7 +451,8 @@ passport-mrz-scanner/
 ## Dependencies
 
 - `fastmrz` - Fast MRZ parsing library
-- `pdf2image` - PDF to image conversion
+- `PyMuPDF (fitz)` - Primary PDF-to-image renderer (fast)
+- `pdf2image` - Fallback PDF renderer (uses Poppler)
 - `Pillow` (PIL) - Image processing
 - `pytesseract` - Python wrapper for Tesseract OCR
 - `python-dotenv` - Environment variable management
