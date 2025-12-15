@@ -1,0 +1,69 @@
+{
+  "family": "mrz-scanner-api",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": ["FARGATE"],
+  "cpu": "1024",
+  "memory": "3072",
+  "containerDefinitions": [
+    {
+      "name": "mrz-scanner-api",
+      "image": "YOUR_ECR_REPOSITORY_URI:latest",
+      "essential": true,
+      "portMappings": [
+        {
+          "containerPort": 5000,
+          "protocol": "tcp"
+        }
+      ],
+      "environment": [
+        {
+          "name": "PORT",
+          "value": "5000"
+        },
+        {
+          "name": "HOST",
+          "value": "0.0.0.0"
+        },
+        {
+          "name": "PDF_DPI",
+          "value": "300"
+        },
+        {
+          "name": "OCR_PSM_MODE",
+          "value": "6"
+        },
+        {
+          "name": "MAX_PAGES_DEFAULT",
+          "value": "10"
+        },
+        {
+          "name": "API_KEYS",
+          "value": "your-secret-api-key-here,another-key-here"
+        },
+        {
+          "name": "RATE_LIMIT_PER_KEY",
+          "value": "100 per hour"
+        }
+      ],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/mrz-scanner-api",
+          "awslogs-region": "us-east-1",
+          "awslogs-stream-prefix": "ecs"
+        }
+      },
+      "healthCheck": {
+        "command": [
+          "CMD-SHELL",
+          "curl -f http://localhost:5000/health || exit 1"
+        ],
+        "interval": 30,
+        "timeout": 5,
+        "retries": 3,
+        "startPeriod": 60
+      }
+    }
+  ]
+}
+
