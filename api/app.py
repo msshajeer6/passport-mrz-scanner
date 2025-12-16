@@ -240,6 +240,10 @@ def scan_mrz_base64():
               type: integer
               description: Page number to start checking from (optional, only for PDFs, 1-indexed). If specified, this page is checked FIRST before others.
               example: 2
+            start_page_only:
+              type: boolean
+              description: When start_page is specified, only check that page and skip remaining pages if MRZ not found (optional, only for PDFs). Default: false.
+              example: true
     responses:
       200:
         description: Success or failure response
@@ -314,6 +318,13 @@ def scan_mrz_base64():
             except (ValueError, TypeError):
                 start_page = None
         
+        start_page_only = data.get('start_page_only', False)
+        if start_page_only:
+            try:
+                start_page_only = bool(start_page_only) if isinstance(start_page_only, bool) else str(start_page_only).lower() in ('true', '1', 'yes', 'on')
+            except (ValueError, TypeError):
+                start_page_only = False
+        
         if not file_data_b64:
             return jsonify({
                 "status": "error",
@@ -342,7 +353,7 @@ def scan_mrz_base64():
             # Process the file with timing
             start_time = time.time()
             if is_pdf:
-                result = process_pdf(temp_path, show_progress=False, max_pages=max_pages, start_page=start_page)
+                result = process_pdf(temp_path, show_progress=False, max_pages=max_pages, start_page=start_page, start_page_only=start_page_only)
             else:
                 result = process_image(temp_path, show_progress=False)
             processing_time = round(time.time() - start_time, 2)
@@ -414,6 +425,11 @@ def scan_mrz_file():
         type: integer
         required: false
         description: Page number to start checking from (optional, only for PDFs, 1-indexed). If specified, this page is checked FIRST before others.
+      - in: formData
+        name: start_page_only
+        type: boolean
+        required: false
+        description: When start_page is specified, only check that page and skip remaining pages if MRZ not found (optional, only for PDFs). Default: false.
     responses:
       200:
         description: Success or failure response
@@ -495,6 +511,8 @@ def scan_mrz_file():
             except ValueError:
                 start_page = None
         
+        start_page_only = request.form.get('start_page_only', 'false').lower() in ('true', '1', 'yes', 'on')
+        
         # Determine file type
         is_pdf = filename.lower().endswith('.pdf')
         
@@ -508,7 +526,7 @@ def scan_mrz_file():
             # Process the file with timing
             start_time = time.time()
             if is_pdf:
-                result = process_pdf(temp_path, show_progress=False, max_pages=max_pages, start_page=start_page)
+                result = process_pdf(temp_path, show_progress=False, max_pages=max_pages, start_page=start_page, start_page_only=start_page_only)
             else:
                 result = process_image(temp_path, show_progress=False)
             processing_time = round(time.time() - start_time, 2)
@@ -587,6 +605,10 @@ def scan_from_url():
               type: integer
               description: Page number to start checking from (optional, only for PDFs, 1-indexed). If specified, this page is checked FIRST before others.
               example: 2
+            start_page_only:
+              type: boolean
+              description: When start_page is specified, only check that page and skip remaining pages if MRZ not found (optional, only for PDFs). Default: false.
+              example: true
     responses:
       200:
         description: Success or failure response
@@ -631,6 +653,13 @@ def scan_from_url():
             except (ValueError, TypeError):
                 start_page = None
         
+        start_page_only = data.get('start_page_only', False)
+        if start_page_only:
+            try:
+                start_page_only = bool(start_page_only) if isinstance(start_page_only, bool) else str(start_page_only).lower() in ('true', '1', 'yes', 'on')
+            except (ValueError, TypeError):
+                start_page_only = False
+        
         # Extract file extension from URL (handle query parameters)
         from urllib.parse import urlparse
         parsed_url = urlparse(url)
@@ -665,7 +694,7 @@ def scan_from_url():
             # Process the file with timing
             start_time = time.time()
             if is_pdf:
-                result = process_pdf(temp_path, show_progress=False, max_pages=max_pages, start_page=start_page)
+                result = process_pdf(temp_path, show_progress=False, max_pages=max_pages, start_page=start_page, start_page_only=start_page_only)
             else:
                 result = process_image(temp_path, show_progress=False)
             processing_time = round(time.time() - start_time, 2)

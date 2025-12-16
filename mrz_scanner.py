@@ -389,7 +389,7 @@ def _process_single_page(pdf_path, page_num, total_pages, show_progress=False, d
         return None
 
 
-def process_pdf(pdf_path, show_progress=False, max_pages=None, parallel=True, start_page=None):
+def process_pdf(pdf_path, show_progress=False, max_pages=None, parallel=True, start_page=None, start_page_only=False):
     """
     Process a PDF file, checking multiple pages if MRZ data is not found on the first page.
     Uses parallel processing by default for better performance on multi-page PDFs.
@@ -404,6 +404,8 @@ def process_pdf(pdf_path, show_progress=False, max_pages=None, parallel=True, st
         start_page (int): Optional page number to start checking from (1-indexed). 
                          If provided, this page is checked FIRST (sequentially) before others.
                          If not provided, uses smart ordering (page 2, then 1, then 3, 4...).
+        start_page_only (bool): If True and start_page is specified, only check that page and skip
+                                remaining pages if MRZ not found. Default: False.
     
     Returns:
         dict: A dictionary containing the parsed MRZ data on success, with page number.
@@ -453,6 +455,17 @@ def process_pdf(pdf_path, show_progress=False, max_pages=None, parallel=True, st
                     except:
                         pass
                 return result
+            
+            # If start_page_only is True, don't check remaining pages
+            if start_page_only:
+                if show_progress:
+                    print(f"No MRZ data found on page {start_page}. Skipping remaining pages (start_page_only=True).")
+                if doc is not None:
+                    try:
+                        doc.close()
+                    except:
+                        pass
+                return None
             
             # Start page didn't have MRZ, now check remaining pages
             remaining_pages = [p for p in range(1, pages_to_check + 1) if p != start_page]
@@ -603,6 +616,11 @@ if __name__ == "__main__":
         help="Page number to start checking from (1-indexed). If specified, this page is checked FIRST before others."
     )
     parser.add_argument(
+        "--start-page-only",
+        action="store_true",
+        help="When start_page is specified, only check that page and skip remaining pages if MRZ not found."
+    )
+    parser.add_argument(
         "--no-parallel",
         action="store_true",
         help="Disable parallel processing for PDF files."
@@ -624,7 +642,7 @@ if __name__ == "__main__":
                 print(f"PDF file detected: '{input_file_path}'")
             # Use command-line argument if provided, otherwise use env default, otherwise None (all pages)
             max_pages = args.max_pages if args.max_pages is not None else MAX_PAGES_DEFAULT
-            final_result = process_pdf(input_file_path, show_progress, max_pages, parallel=not args.no_parallel, start_page=args.start_page)
+            final_result = process_pdf(input_file_path, show_progress, max_pages, parallel=not args.no_parallel, start_page=args.start_page, start_page_only=args.start_page_only)
         else:
             if show_progress:
                 print(f"\nProcessing image: '{input_file_path}'...")
